@@ -1,0 +1,98 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import numpy.linalg as la
+
+#Numerisk løsning av poissonligningen i 2D
+
+#Antall punkter for tilnærming
+m = 50
+n = 50
+
+#Lager gitter
+x = np.linspace(-5, 5, m + 2)
+y = np.linspace(0, 2, n + 2)
+
+h = x[1] - x[0]
+k = y[1] - y[0]
+
+#Lager matrisen med kroneckerprodukt
+Lx = (1 / h**2) * (
+    np.diag((m - 1) * [1], -1) +
+    np.diag(m * [-2], 0) +
+    np.diag((m - 1) * [1], 1)
+)
+Ix = np.eye(m)
+
+Ly = (1 / k**2) * (
+    np.diag((n - 1) * [1], -1) +
+    np.diag(n * [-2], 0) +
+    np.diag((n - 1) * [1], 1)
+)
+Iy = np.eye(n)
+
+L = np.kron(Lx, Iy) + np.kron(Ix, Ly)
+
+# lager "kantvektorer" som bestemmer hvilke punkter som påvirkes av randbetingelsene, 
+# og hvilke som får null direkte bidrag fra randbetingelsene
+venstre = np.zeros(m)     # denne bestemmer at alle punkter langs venstre kant skal få et -1/(h**2) bidrag av venstre randbetingelse
+venstre[0] = -1 / (h**2)
+
+hoyre = np.zeros(m)     # denne bestemmer at alle punkter langs høyre kant skal få et -1/(h**2) bidrag av høyre randbetingelse
+hoyre[-1] = -1 / (h**2)
+
+nede = np.zeros(n)     # denne bestemmer at alle punkter langs nedre kant skal få et -1/(k**2) bidrag av nedre randbetingelse
+nede[0] = -1 / (k**2)
+
+ovre = np.zeros(n)     # denne bestemmer at alle punkter langs øvre kant skal få et -1/(k**2) bidrag av øvre randbetingelse
+ovre[-1] = -1 / (k**2)
+
+def f1(x):
+    # nedre randbetingelse
+    return 0 * x
+
+def f2(x):
+    #ovre randbetingelse
+    return np.sin(np.pi * x)
+
+def f3(y):
+    #venstre randbetingelse
+    return np.sin(2*np.pi*y)
+
+def f4(y):
+    #hoyre randbetingelse
+    return np.sin(2*np.pi*y)
+
+
+x_in = x[1:-1]  #indre x-punkter
+y_in = y[1:-1]  #indre y-punkter
+
+# her blir hvær randbetingelse multiplisert med "kantvektoren" som tilhører randen
+#  dette gjør at vi får bestemt hvor mye bidrag HVERT ENESTE punkt får ifra den bestemte randen.
+#  siden kroneckerproduktet brukes skapes en vektor som har alle de ukjente punktene strekt på en rekke.
+#  Vi sumerer de 4 vektorene som bestemmer punktenes bidrag fra hver enkelt rand.
+F = (
+    np.kron(f1(x_in), nede) +   # vektor med alle ukjente punkter, og deres bidrag fra nedre randbetingelser
+    np.kron(f2(x_in), ovre) +   # vektor med alle ukjente punkter, og deres bidrag fra øvre randbetingelser
+    np.kron(venstre, f3(y_in)) +   # vektor med alle ukjente punkter, og deres bidrag fra venstre randbetingelser
+    np.kron(hoyre, f4(y_in))     # vektor med alle ukjente punkter, og deres bidrag fra høyre randbetingelser
+)
+
+#Løser med linalgsolve
+u = la.solve(L, F)
+U = np.reshape(u, (m, n))
+
+# Plotting
+X, Y = np.meshgrid(x_in, y_in, indexing="ij")
+
+fig, ax = plt.subplots(
+    subplot_kw={"projection": "3d"},
+    figsize=(10, 8)
+)
+
+ax.plot_surface(X, Y, U, cmap="viridis")
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+ax.set_zlabel("u(x,y)")
+ax.set_title("Numerisk løsning av u_xx + u_yy = 0")
+
+plt.show()
