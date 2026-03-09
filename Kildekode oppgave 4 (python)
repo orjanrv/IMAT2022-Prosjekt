@@ -1,0 +1,69 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+def f(x):
+    return np.cos(np.pi * x)
+
+def u0(x):
+    return 1 + x + 5*np.sin(np.pi * x)
+
+N = 201                 # antall rompunkter
+x = np.linspace(-1, 1, N)
+dx = x[1] - x[0]
+
+T = 1.0                 # sluttid
+
+# Stabilitet: r = dt/dx^2 <= 1/2 (eksplisitt varme)
+dt = 0.4 * dx**2
+r = dt / dx**2
+
+Nt = int(np.ceil(T / dt))
+t = 0.0
+
+print(f"dx = {dx:.6f}, dt = {dt:.6e}, r = {r:.4f}, Nt = {Nt}")
+
+
+# Initialbetingelse + rand
+u = u0(x).astype(float)
+
+# Randbetingelser
+u[0] = 0.0
+u[-1] = 2.0
+
+# Plotting
+snap_times = [0.0, 0.1, 0.3, 0.6, 1.0]
+snapshots = {0.0: u.copy()}
+
+
+# Tidsløkke: Forlengs Euler + sentraldifferanse
+for n in range(Nt):
+    # indre punkter
+    u_new = u.copy()
+
+    u_xx = (u[2:] - 2*u[1:-1] + u[:-2]) / dx**2
+    u_new[1:-1] = u[1:-1] + dt * (u_xx - f(x[1:-1]))
+
+    # Randbetingelser
+    u_new[0] = 0.0
+    u_new[-1] = 2.0
+
+    u = u_new
+    t = (n + 1) * dt
+
+    # lagre snapshots nær ønskede tidspunkter
+    for ts in snap_times:
+        if ts not in snapshots and t >= ts:
+            snapshots[ts] = u.copy()
+
+# Plot
+plt.figure()
+for ts in snap_times:
+    if ts in snapshots:
+        plt.plot(x, snapshots[ts], label=f"t={ts:g}")
+plt.xlabel("x")
+plt.ylabel("u(x,t)")
+plt.title("1D varmeligning: eksplisitt Euler + sentraldifferanse")
+plt.grid(True)
+plt.legend()
+plt.show()
